@@ -1,0 +1,166 @@
+# ИМПОРТ БИБЛИОТЕК
+from bs4 import BeautifulSoup
+import requests
+import pandas as pd
+
+# ЦЕЛЕВОЙ АДРЕС
+url = "https://career.habr.com/vacancies?q=ML%20NLP&type=all"
+
+# ОТВЕТ ОТ СЕРВЕРА
+response = requests.get(
+    url,
+    headers={
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/11.1.2 Safari/605.1.15"
+    },
+)
+print(response, "\n")
+
+# ИЗВЛЕЧЕНИЕ HTML-ТЕКСТА
+html_text = requests.get(url).text
+# СОЗДАНИЕ ОБЪЕКТА SOUP
+soup = BeautifulSoup(html_text, "lxml")
+# print(soup)
+
+
+# ИЗВЛЕЧЕНИЕ КЛАССА С ДЕРЕВОМ КАРТОЧЕК ВАКАНСИЙ
+ad = soup.find("div", class_="section-group section-group--gap-medium")
+ad_str = list(map(str, ad))
+# print(ad)
+
+# ИЗВЛЕЧЕНИЕ КЛАССОВ С НАЗВАНИЯМИ КОМПАНИЙ И ИХ СПИСОЧНОЕ ПРЕДСТАВЛЕНИЕ
+name_all = ad.find_all("a", class_="link-comp link-comp--appearance-dark")
+# преобразование элементов списка в строковый формат
+name_all = list(map(str, name_all))
+# очистка строковых элементов от лишних символов
+name_all = [x.split(">", 1)[1] if ">" in x else x for x in name_all]
+name_all = [x.split("<")[0] for x in name_all]
+
+
+# for index, value in enumerate(location_all, 1):
+# print(index, value)
+# print("\n")
+
+# ИЗВЛЕЧЕНИЕ КЛАССОВ С УРОВНЕМ ЗАРПЛАТ И ИХ СПИСОЧНОЕ ПРЕДСТАВЛЕНИЕ
+id_all = ad.find_all(
+    "div", class_="vacancy-card__info"
+)  # это список с 25 элементами - айди карточек со всей инфой
+salary = []
+search_text1 = "noSalary"
+search_text2 = "Зарплата не указана"
+id_all_text_el = [str(x) for x in id_all]
+for item in id_all_text_el:
+    if search_text1 in item:
+        item = "Зарплата не указана"
+        salary.append(item)
+    elif search_text2 in item:
+        word1 = "получают "
+        word2 = "₽"
+        item1 = item[item.find(word1) + len(word1) :]
+        item2 = item1[: item1.find(word2) + len(word2)]
+        salary.append(item2)
+    elif search_text1 not in item and search_text2 not in item:
+        word3 = "от "
+        word4 = "₽"
+        item3 = item[item.find(word3) + len(word3) :]
+        item4 = item3[: item3.find(word4) + len(word4)]
+        salary.append(item4)
+
+
+# for index, value in enumerate(salary, 1):
+# print(index, value)
+# print("\n")
+
+# ИЗВЛЕНЧЕНИЕ ДАННЫХ О ФОРМАТЕ РАБОТЫ
+id_all = ad.find_all(
+    "div", class_="vacancy-card__info"
+)  # это список с 25 элементами - айди карточек со всей инфой
+work_format = []
+search_text1 = "Можно"
+id_all_text_el = [str(x) for x in id_all]
+for item in id_all_text_el:
+    if search_text1 in item:
+        item = "Можно удалённо"
+        work_format.append(item)
+    elif search_text1 not in item:
+        item = "Офис"
+        work_format.append(item)
+
+# for index, value in enumerate(work_format, 1):
+# print(index, value)
+# print("\n")
+
+
+# ИЗВЛЕНЧЕНИЕ ДАННЫХ О ГРЕЙДЕ
+id_all = ad.find_all(
+    "div", class_="vacancy-card__info"
+)  # это список с 25 элементами - айди карточек со всей инфой
+grade = []
+search_text1 = "Junior"
+search_text2 = "Middle"
+search_text3 = "Senior"
+search_text4 = "Lead"
+id_all_text_el = [str(x) for x in id_all]
+for item in id_all_text_el:
+    if search_text1 in item:
+        item = "Junior"
+        grade.append(item)
+    elif search_text2 in item:
+        item = "Middle"
+        grade.append(item)
+    elif search_text3 in item:
+        item = "Senior"
+        grade.append(item)
+    elif search_text4 in item:
+        item = "Lead"
+        grade.append(item)
+    else:
+        item = "Грейд не указан"
+        grade.append(item)
+
+# for index, value in enumerate(grade, 1):
+# print(index, value)
+# print("\n")
+
+
+# ИЗВЛЕЧЕНИЕ ДАННЫХ О ЛОКАЦИИ РАБОТЫ
+id_all = ad.find_all("div", class_="vacancy-card__info")
+location = []
+search_text1 = "Москва"
+search_text2 = "Санкт-Петербург"
+id_all_text_el = [str(x) for x in id_all]
+for item in id_all_text_el:
+    if search_text1 in item:
+        item = "Москва"
+        location.append(item)
+    elif search_text2 in item:
+        item = "Санкт-Петербург"
+        location.append(item)
+    else:
+        item = "Регион"
+        location.append(item)
+
+# for index, value in enumerate(location, 1):
+# print(index, value)
+# print("\n")
+
+# file = open("output_salary3.txt", "w", encoding="utf-8")
+# file.write(new_salary)
+# file.close()
+
+# Create dataframe
+# Import library
+
+data = {
+    "Компания": name_all,
+    "Локация": location,
+    "Зарплата": salary,
+    "Формат работы": work_format,
+    "Требуемый грейд": grade,
+}
+
+row_labels = []
+for i in range(1, 26):
+    row_labels.append(i)
+
+df = pd.DataFrame(data=data, index=row_labels)
+print(df)
